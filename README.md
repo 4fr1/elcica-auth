@@ -43,8 +43,17 @@ Untuk produksi, jangan taruh nilai di repo. Simpan lewat GitHub GUI:
 Settings → Secrets and variables → Actions
 ```
 
-Kunci yang nanti dipakai: `JWT_SECRET`, `WAXUM_TOKEN`, dan token Cloudflare
-(bila deploy sudah disetujui).
+Variabel produksi yang dipakai (nilainya tidak pernah disimpan di repo):
+
+```text
+DATABASE_URL      JWT_SECRET (wajib base64)   HOST
+WAXUM_BASE_URL    WAXUM_TOKEN
+MAILER_ENABLE     MAILER_HOST / MAILER_USER / MAILER_PASSWORD
+PORT / BINDING    (opsional, default 5150 / 0.0.0.0)
+```
+
+Mailer default-nya mati di produksi; email gagal hanya jadi warning dan tidak
+menggagalkan register/login. Token Cloudflare masuk GUI, bukan file repo.
 
 ## Workflow
 

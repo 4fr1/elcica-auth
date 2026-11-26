@@ -89,7 +89,10 @@ async fn register(
         .set_email_verification_sent(&ctx.db)
         .await?;
 
-    AuthMailer::send_welcome(&ctx, &user).await?;
+    // Best-effort: kalau SMTP belum aktif, user tetap terdaftar.
+    if let Err(err) = AuthMailer::send_welcome(&ctx, &user).await {
+        tracing::warn!(error = %err, "email welcome gagal dikirim (best-effort)");
+    }
 
     format::json(())
 }
@@ -133,7 +136,9 @@ async fn forgot(
         .set_forgot_password_sent(&ctx.db)
         .await?;
 
-    AuthMailer::forgot_password(&ctx, &user).await?;
+    if let Err(err) = AuthMailer::forgot_password(&ctx, &user).await {
+        tracing::warn!(error = %err, "email reset password gagal dikirim (best-effort)");
+    }
 
     format::json(())
 }
@@ -254,7 +259,9 @@ async fn magic_link(
     };
 
     let user = user.into_active_model().create_magic_link(&ctx.db).await?;
-    AuthMailer::send_magic_link(&ctx, &user).await?;
+    if let Err(err) = AuthMailer::send_magic_link(&ctx, &user).await {
+        tracing::warn!(error = %err, "email magic link gagal dikirim (best-effort)");
+    }
 
     format::empty_json()
 }
@@ -311,7 +318,9 @@ async fn resend_verification_email(
         .set_email_verification_sent(&ctx.db)
         .await?;
 
-    AuthMailer::send_welcome(&ctx, &user).await?;
+    if let Err(err) = AuthMailer::send_welcome(&ctx, &user).await {
+        tracing::warn!(error = %err, "email verifikasi gagal dikirim (best-effort)");
+    }
     tracing::info!(pid = user.pid.to_string(), "Verification email re-sent");
 
     format::json(())

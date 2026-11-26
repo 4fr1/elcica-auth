@@ -63,16 +63,18 @@ mailer:
   # SMTP mailer configuration.
   smtp:
     # Enable/Disable smtp mailer.
-    enable: true
+    # Best-effort: produksi boleh jalan tanpa SMTP. Kalau SMTP belum diset,
+    # email gagal dicatat sebagai warning, bukan bikin register/login gagal.
+    enable: <%= get_env(name="MAILER_ENABLE", default="false") %>
     # SMTP server host. e.x localhost, smtp.gmail.com
-    host: <%= get_env(name="MAILER_HOST") %>
+    host: <%= get_env(name="MAILER_HOST", default="") %>
     # SMTP server port
     port: <%= get_env(name="MAILER_PORT", default="587") %>
     # Use secure connection (SSL/TLS).
     secure: true
     auth:
-      user: <%= get_env(name="MAILER_USER") %>
-      password: <%= get_env(name="MAILER_PASSWORD") %>
+      user: <%= get_env(name="MAILER_USER", default="") %>
+      password: <%= get_env(name="MAILER_PASSWORD", default="") %>
     # Override the SMTP hello name (default is the machine's hostname)
     # hello_name:
 
@@ -128,5 +130,7 @@ settings:
     cookie_domain: '.elcica.xyz'
     cookie_secure: true
   waxum:
-    base_url: 'http://waxum:3451'
-    token: ''
+    # Isi lewat environment, jangan lewat file yang ter-commit.
+    # Container: http://waxum:3451 · tunnel ke host: http://localhost:3451
+    base_url: <%= get_env(name="WAXUM_BASE_URL", default="http://waxum:3451") %>
+    token: <%= get_env(name="WAXUM_TOKEN", default="") %>
