@@ -1,0 +1,57 @@
+name: CI
+
+# Setiap push dan PR memunculkan status di tab Actions.
+# Tidak ada secret yang dipakai di sini: build/test memakai config/test.yaml
+# yang sudah berisi default aman untuk development.
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: format + clippy + test + build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+
+      - name: Rust stable + komponen
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Dependensi sistem
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config libsqlite3-dev cmake build-essential
+
+      # Hanya cache registry, bukan target/: path build absolut bisa bikin
+      # crate tertentu gagal link kalau dipindah antar mesin.
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-elcica-auth-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-elcica-auth-
+
+      - name: Cek format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test
+
+      - name: Build release
+        run: cargo build --release
