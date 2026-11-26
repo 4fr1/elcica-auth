@@ -32,4 +32,11 @@ fn renders_home_view_with_i18n() {
         rendered.contains("ELCICA"),
         "expected the ELCICA landing to render, got: {rendered}"
     );
+
+    let admin = view
+        .render("home/admin.html", serde_json::json!({ "title": "Admin" }))
+        .expect("admin view should render");
+
+    assert!(admin.contains("ADMIN CONSOLE"), "admin heading missing");
+    assert!(admin.contains("/api/me"), "admin page must check /api/me");
 }

@@ -16,6 +16,14 @@ async fn index(ViewEngine(v): ViewEngine<TeraView>) -> Result<Response> {
     format::render().view(&v, "home/index.html", data!({ "title": "ELCICA" }))
 }
 
+/// Halaman admin ringan. Tidak memercayakan role dari sisi klien untuk
+/// otorisasi: halaman ini hanya menampilkan UI, sedangkan `/api/me` yang
+/// memutuskan identitas/role dan tetap dilindungi JWT di server.
+#[debug_handler]
+async fn admin(ViewEngine(v): ViewEngine<TeraView>) -> Result<Response> {
+    format::render().view(&v, "home/admin.html", data!({ "title": "Admin" }))
+}
+
 pub fn routes() -> Routes {
-    Routes::new().add("/", get(index))
+    Routes::new().add("/", get(index)).add("/admin", get(admin))
 }
