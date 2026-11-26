@@ -50,4 +50,22 @@ jobs:
             | jq -r '.result[] | [.id, .pattern, .script] | @tsv'
 
           echo ""
+          echo "=== Tunnel (baca saja) ==="
+          echo "ID                                      NAME            STATUS"
+          curl -sS "${AUTH[@]}" "$API/accounts/$CF_ACCOUNT_ID/cfd_tunnel" \
+            | jq -r 'if .success then (.result[] | [.id, .name, .status] | @tsv) else "Tunnel API tidak bisa dibaca; token mungkin belum punya akses Tunnel:Read" end'
+
+          cname=$(curl -fsS "${AUTH[@]}" "$API/zones/$zone_id/dns_records?name=$ZONE_NAME&type=CNAME" \
+            | jq -r '.result[0].content // empty')
+          tunnel_id=$(printf '%s' "$cname" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          if [ -z "$tunnel_id" ]; then
+            echo "Tunnel id dari CNAME root tidak ditemukan."
+          else
+            echo ""
+            echo "=== Ingress tunnel root (hostname -> service) ==="
+            curl -sS "${AUTH[@]}" "$API/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$tunnel_id/configurations" \
+              | jq -r 'if .success then (.result.config.ingress[]? | [(.hostname // "*"), (.service // "-")] | @tsv) else "Konfigurasi tunnel tidak bisa dibaca" end'
+          fi
+
+          echo ""
           echo "Selesai. Tidak ada perubahan yang dilakukan."
