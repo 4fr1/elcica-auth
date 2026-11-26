@@ -63,6 +63,15 @@
         .menu { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
         .menu a { border: 1px solid var(--border); padding: 14px; color: var(--muted); font-size: .75rem; }
         .menu a:hover { border-color: var(--green2); color: var(--green); }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+        .stat { border: 1px solid var(--border); padding: 10px; }
+        .stat b { display: block; color: var(--green); font-size: 1.05rem; }
+        .stat span { color: var(--muted); font-size: .6rem; letter-spacing: 1px; }
+        table { width: 100%; border-collapse: collapse; font-size: .68rem; margin-top: 10px; }
+        th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid rgba(124,255,155,.08); }
+        th { color: var(--amber); font-weight: normal; letter-spacing: 1px; }
+        td { color: var(--text); word-break: break-all; }
+        .scroll { overflow-x: auto; }
         .note { color: var(--amber); font-size: .74rem; margin-top: 14px; }
         [hidden] { display: none !important; }
         @media (max-width: 560px) { .menu { grid-template-columns: 1fr; } }
@@ -93,6 +102,25 @@
             <h2>AKSES TERBATAS</h2>
             <div class="row"><span class="key">Role kamu</span><span class="value"><span class="badge warn" id="denied-role">-</span></span></div>
             <p class="note">Menu admin hanya tampil untuk role <code>admin</code>. <a href="/login" style="color:var(--green)">Login dengan akun admin →</a></p>
+        </div>
+
+        <div class="card" id="data-card" hidden>
+            <h2>DATA USER</h2>
+            <div class="stats">
+                <div class="stat"><b id="stat-users">-</b><span>TOTAL USER</span></div>
+                <div class="stat"><b id="stat-sent">-</b><span>TERKIRIM BULAN INI</span></div>
+                <div class="stat"><b id="stat-quota">-</b><span>TOTAL KUOTA</span></div>
+                <div class="stat"><b id="stat-period">-</b><span>PERIODE</span></div>
+            </div>
+            <p class="note" id="breakdown">-</p>
+            <div class="scroll">
+                <table>
+                    <thead>
+                        <tr><th>NAMA</th><th>EMAIL</th><th>ROLE</th><th>PLAN</th><th>KUOTA</th><th>DAFTAR</th></tr>
+                    </thead>
+                    <tbody id="user-rows"></tbody>
+                </table>
+            </div>
         </div>
 
         <div id="panel" hidden>
@@ -132,6 +160,50 @@
             });
         });
 
+        function addCell(tr, value) {
+            var td = document.createElement('td');
+            td.textContent = value == null ? '-' : String(value);
+            tr.appendChild(td);
+        }
+
+        function loadOverview() {
+            fetch('/api/admin/overview', { credentials: 'same-origin' })
+                .then(function (r) {
+                    if (!r.ok) { throw new Error('akses ditolak'); }
+                    return r.json();
+                })
+                .then(function (data) {
+                    el('stat-users').textContent = data.total_users;
+                    el('stat-sent').textContent = data.sent_total;
+                    el('stat-quota').textContent = data.quota_total;
+                    el('stat-period').textContent = data.period;
+
+                    var roleText = (data.roles || []).map(function (x) {
+                        return x.name + ': ' + x.total;
+                    }).join(' • ');
+                    var planText = (data.plans || []).map(function (x) {
+                        return x.name + ': ' + x.total;
+                    }).join(' • ');
+                    el('breakdown').textContent = 'Role → ' + roleText + '   |   Plan → ' + planText;
+
+                    var body = el('user-rows');
+                    body.textContent = '';
+                    (data.users || []).forEach(function (u) {
+                        var tr = document.createElement('tr');
+                        addCell(tr, u.name);
+                        addCell(tr, u.email);
+                        addCell(tr, u.role);
+                        addCell(tr, u.plan);
+                        addCell(tr, (u.sent || 0) + ' / ' + (u.quota || 0));
+                        addCell(tr, (u.joined || '').slice(0, 10));
+                        body.appendChild(tr);
+                    });
+                })
+                .catch(function () {
+                    el('breakdown').textContent = 'Gagal memuat data. Periksa endpoint /api/admin/overview.';
+                });
+        }
+
         fetch('/api/me', { credentials: 'same-origin' })
             .then(function (r) {
                 if (!r.ok) { throw new Error('unauthorized'); }
@@ -148,6 +220,8 @@
 
                 if (me.role === 'admin') {
                     show('panel');
+                    show('data-card');
+                    loadOverview();
                 } else {
                     el('denied-role').textContent = me.role || '-';
                     show('denied');

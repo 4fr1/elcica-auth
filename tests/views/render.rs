@@ -44,6 +44,10 @@ fn renders_home_view_with_i18n() {
         admin.contains("/api/auth/logout"),
         "admin page must offer logout"
     );
+    assert!(
+        admin.contains("/api/admin/overview"),
+        "admin page must load the overview endpoint"
+    );
 
     let login = view
         .render("home/login.html", serde_json::json!({ "title": "Login" }))
