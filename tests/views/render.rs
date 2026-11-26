@@ -39,4 +39,15 @@ fn renders_home_view_with_i18n() {
 
     assert!(admin.contains("ADMIN CONSOLE"), "admin heading missing");
     assert!(admin.contains("/api/me"), "admin page must check /api/me");
+    assert!(admin.contains("/login"), "admin page must link to login");
+
+    let login = view
+        .render("home/login.html", serde_json::json!({ "title": "Login" }))
+        .expect("login view should render");
+
+    assert!(login.contains("ELCICA LOGIN"), "login heading missing");
+    assert!(
+        login.contains("/api/auth/login"),
+        "login must post to Loco auth"
+    );
 }

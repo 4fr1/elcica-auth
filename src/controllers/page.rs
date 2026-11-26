@@ -24,6 +24,16 @@ async fn admin(ViewEngine(v): ViewEngine<TeraView>) -> Result<Response> {
     format::render().view(&v, "home/admin.html", data!({ "title": "Admin" }))
 }
 
+/// Form login ringan. POST-nya tetap ke endpoint Loco `/api/auth/login`,
+/// sehingga cookie `elcica_session` dibuat oleh server yang sama.
+#[debug_handler]
+async fn login(ViewEngine(v): ViewEngine<TeraView>) -> Result<Response> {
+    format::render().view(&v, "home/login.html", data!({ "title": "Login" }))
+}
+
 pub fn routes() -> Routes {
-    Routes::new().add("/", get(index)).add("/admin", get(admin))
+    Routes::new()
+        .add("/", get(index))
+        .add("/admin", get(admin))
+        .add("/login", get(login))
 }
