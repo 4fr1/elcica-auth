@@ -72,6 +72,20 @@
         th { color: var(--amber); font-weight: normal; letter-spacing: 1px; }
         td { color: var(--text); word-break: break-all; }
         .scroll { overflow-x: auto; }
+        .btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--green);
+            font-family: inherit;
+            font-size: .68rem;
+            padding: 8px 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover { border-color: var(--green2); }
+        .qr-box { margin-top: 14px; border: 1px solid var(--border); padding: 14px; text-align: center; }
+        .qr-box svg { max-width: 220px; height: auto; }
+        .qr-box .hint { color: var(--muted); font-size: .72rem; }
         .note { color: var(--amber); font-size: .74rem; margin-top: 14px; }
         [hidden] { display: none !important; }
         @media (max-width: 560px) { .menu { grid-template-columns: 1fr; } }
@@ -120,6 +134,25 @@
                     </thead>
                     <tbody id="user-rows"></tbody>
                 </table>
+            </div>
+        </div>
+
+        <div class="card" id="wa-card" hidden>
+            <h2>SESI WHATSAPP</h2>
+            <p class="note">Nomor WhatsApp berasal dari waxum, bukan dari tabel user ELCICA.</p>
+            <button class="btn" id="wa-create" type="button">+ BUAT SESI + QR</button>
+            <div class="scroll">
+                <table>
+                    <thead>
+                        <tr><th>ID SESI</th><th>NAMA</th><th>NOMOR</th><th>STATUS</th><th>AKSI</th></tr>
+                    </thead>
+                    <tbody id="wa-rows"></tbody>
+                </table>
+            </div>
+            <div class="qr-box" id="qr-box" hidden>
+                <div class="hint" id="qr-hint">Memuat QR...</div>
+                <div id="qr-image"></div>
+                <button class="btn" id="qr-close" type="button">TUTUP</button>
             </div>
         </div>
 
@@ -204,6 +237,106 @@
                 });
         }
 
+        var qrTimer = null;
+
+        function loadWA() {
+            fetch('/api/admin/wa/sessions', { credentials: 'same-origin' })
+                .then(function (r) {
+                    if (!r.ok) { throw new Error('akses ditolak'); }
+                    return r.json();
+                })
+                .then(function (data) {
+                    var body = el('wa-rows');
+                    body.textContent = '';
+                    (data.sessions || []).forEach(function (s) {
+                        var tr = document.createElement('tr');
+                        addCell(tr, s.id);
+                        addCell(tr, s.name);
+                        addCell(tr, s.phone_number);
+                        addCell(tr, s.status);
+                        var td = document.createElement('td');
+                        var btn = document.createElement('button');
+                        btn.className = 'btn';
+                        btn.type = 'button';
+                        btn.textContent = 'QR';
+                        btn.addEventListener('click', function () { showQR(s.id); });
+                        td.appendChild(btn);
+                        tr.appendChild(td);
+                        body.appendChild(tr);
+                    });
+                })
+                .catch(function () {
+                    var tr = document.createElement('tr');
+                    var td = document.createElement('td');
+                    td.colSpan = 5;
+                    td.textContent = 'Gagal memuat sesi waxum.';
+                    tr.appendChild(td);
+                    el('wa-rows').textContent = '';
+                    el('wa-rows').appendChild(tr);
+                });
+        }
+
+        function showQR(sid) {
+            if (qrTimer) { clearInterval(qrTimer); }
+            el('qr-box').hidden = false;
+            el('qr-hint').textContent = 'QR sesi ' + sid + ' — scan via WhatsApp → Linked devices.';
+
+            function refresh() {
+                fetch('/api/admin/wa/sessions/' + encodeURIComponent(sid) + '/qr.svg', {
+                    credentials: 'same-origin'
+                }).then(function (r) {
+                    if (r.status === 204) {
+                        el('qr-image').textContent = '';
+                        el('qr-hint').textContent = 'QR tidak tersedia. Sesi mungkin sudah terhubung.';
+                        return;
+                    }
+                    if (!r.ok) { throw new Error('gagal'); }
+                    return r.text().then(function (svg) {
+                        el('qr-image').innerHTML = svg;
+                    });
+                }).catch(function () {
+                    el('qr-hint').textContent = 'Gagal memuat QR.';
+                });
+            }
+
+            refresh();
+            qrTimer = setInterval(refresh, 5000);
+        }
+
+        function closeQR() {
+            if (qrTimer) { clearInterval(qrTimer); qrTimer = null; }
+            el('qr-box').hidden = true;
+            el('qr-image').textContent = '';
+        }
+
+        el('wa-create').addEventListener('click', function () {
+            var button = el('wa-create');
+            button.disabled = true;
+            button.textContent = 'Membuat sesi...';
+            fetch('/api/admin/wa/sessions/create', {
+                method: 'POST',
+                credentials: 'same-origin'
+            })
+            .then(function (r) {
+                if (!r.ok) { throw new Error('gagal membuat sesi'); }
+                return r.json();
+            })
+            .then(function (data) {
+                button.disabled = false;
+                button.textContent = '+ BUAT SESI + QR';
+                var session = (data && data.session) || {};
+                if (session.id) { showQR(session.id); }
+                loadWA();
+            })
+            .catch(function () {
+                button.disabled = false;
+                button.textContent = '+ BUAT SESI + QR';
+                el('qr-hint').textContent = 'Gagal membuat sesi.';
+            });
+        });
+
+        el('qr-close').addEventListener('click', closeQR);
+
         fetch('/api/me', { credentials: 'same-origin' })
             .then(function (r) {
                 if (!r.ok) { throw new Error('unauthorized'); }
@@ -221,7 +354,9 @@
                 if (me.role === 'admin') {
                     show('panel');
                     show('data-card');
+                    show('wa-card');
                     loadOverview();
+                    loadWA();
                 } else {
                     el('denied-role').textContent = me.role || '-';
                     show('denied');
