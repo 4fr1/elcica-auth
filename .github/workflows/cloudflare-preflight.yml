@@ -39,15 +39,15 @@ jobs:
 
           echo ""
           echo "=== DNS records ==="
+          echo "TYPE    NAME                 CONTENT                         PROXIED"
           curl -fsS "${AUTH[@]}" "$API/zones/$zone_id/dns_records?per_page=100" \
-            | jq -r '.result[] | [.type, .name, .content, (.proxied|tostring)] | @tsv' \
-            | column -t -s $'\t'
+            | jq -r '.result[] | [.type, .name, .content, (.proxied|tostring)] | @tsv'
 
           echo ""
           echo "=== Worker routes ==="
+          echo "ID                                      PATTERN                 SCRIPT"
           curl -fsS "${AUTH[@]}" "$API/zones/$zone_id/workers/routes" \
-            | jq -r '.result[] | [.id, .pattern, .script] | @tsv' \
-            | column -t -s $'\t'
+            | jq -r '.result[] | [.id, .pattern, .script] | @tsv'
 
           echo ""
           echo "Selesai. Tidak ada perubahan yang dilakukan."
