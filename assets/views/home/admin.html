@@ -32,6 +32,17 @@
         .brand small { display: block; color: var(--muted); font-size: .58rem; letter-spacing: 2px; font-weight: normal; }
         .back { color: var(--muted); font-size: .72rem; }
         .back:hover { color: var(--green); }
+        .nav-actions { display: flex; align-items: center; gap: 16px; }
+        .logout {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-family: inherit;
+            font-size: .68rem;
+            padding: 7px 11px;
+            cursor: pointer;
+        }
+        .logout:hover { border-color: var(--amber); color: var(--amber); }
         main { padding: 48px 0; }
         .eyebrow { color: var(--amber); font-size: .7rem; letter-spacing: 3px; margin-bottom: 12px; }
         h1 { color: var(--green); font-size: 2.2rem; letter-spacing: 3px; }
@@ -61,7 +72,10 @@
     <div class="topbar">
         <div class="container nav">
             <a class="brand" href="/">ELCICA<small>ADMIN // CONSOLE</small></a>
-            <a class="back" href="/">← KEMBALI</a>
+            <div class="nav-actions">
+                <a class="back" href="/">← KEMBALI</a>
+                <button class="logout" id="logout" type="button">LOGOUT</button>
+            </div>
         </div>
     </div>
 
@@ -108,6 +122,15 @@
     <script>
         function el(id) { return document.getElementById(id); }
         function show(id) { el(id).hidden = false; }
+
+        el('logout').addEventListener('click', function () {
+            fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'same-origin'
+            }).then(function () {
+                window.location.assign('/login');
+            });
+        });
 
         fetch('/api/me', { credentials: 'same-origin' })
             .then(function (r) {

@@ -40,6 +40,10 @@ fn renders_home_view_with_i18n() {
     assert!(admin.contains("ADMIN CONSOLE"), "admin heading missing");
     assert!(admin.contains("/api/me"), "admin page must check /api/me");
     assert!(admin.contains("/login"), "admin page must link to login");
+    assert!(
+        admin.contains("/api/auth/logout"),
+        "admin page must offer logout"
+    );
 
     let login = view
         .render("home/login.html", serde_json::json!({ "title": "Login" }))
