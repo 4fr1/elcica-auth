@@ -86,11 +86,17 @@
         </form>
 
         <div class="msg" id="msg"></div>
-        <div class="foot"><a href="/">← KEMBALI KE LANDING</a></div>
+        <div class="foot"><a href="/register">BELUM PUNYA AKUN? DAFTAR →</a><br><a href="/">← KEMBALI KE LANDING</a></div>
     </div>
 
     <script>
         function el(id) { return document.getElementById(id); }
+
+        if (new URLSearchParams(window.location.search).get('registered') === '1') {
+            var info = el('msg');
+            info.className = 'msg ok';
+            info.textContent = 'Akun berhasil dibuat. Silakan login.';
+        }
 
         el('form').addEventListener('submit', function (event) {
             event.preventDefault();

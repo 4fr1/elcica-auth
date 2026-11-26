@@ -31,9 +31,17 @@ async fn login(ViewEngine(v): ViewEngine<TeraView>) -> Result<Response> {
     format::render().view(&v, "home/login.html", data!({ "title": "Login" }))
 }
 
+/// Form pendaftaran ringan. POST-nya ke endpoint Loco `/api/auth/register`.
+/// Aturan email (jika ada) tetap diputuskan server, bukan template ini.
+#[debug_handler]
+async fn register(ViewEngine(v): ViewEngine<TeraView>) -> Result<Response> {
+    format::render().view(&v, "home/register.html", data!({ "title": "Daftar" }))
+}
+
 pub fn routes() -> Routes {
     Routes::new()
         .add("/", get(index))
         .add("/admin", get(admin))
         .add("/login", get(login))
+        .add("/register", get(register))
 }

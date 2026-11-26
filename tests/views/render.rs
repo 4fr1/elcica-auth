@@ -50,4 +50,21 @@ fn renders_home_view_with_i18n() {
         login.contains("/api/auth/login"),
         "login must post to Loco auth"
     );
+    assert!(login.contains("/register"), "login must link to register");
+
+    let register = view
+        .render(
+            "home/register.html",
+            serde_json::json!({ "title": "Daftar" }),
+        )
+        .expect("register view should render");
+
+    assert!(
+        register.contains("DAFTAR ELCICA"),
+        "register heading missing"
+    );
+    assert!(
+        register.contains("/api/auth/register"),
+        "register must post to Loco auth"
+    );
 }
