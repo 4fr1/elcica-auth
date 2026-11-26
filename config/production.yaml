@@ -36,7 +36,7 @@ server:
   binding: <%= get_env(name="BINDING", default="0.0.0.0") %>
   # The UI hostname or IP address that mailers will point to.
   # Required: links in outgoing mail have to name the real host.
-  host: <%= get_env(name="HOST") %>
+  host: '<%= get_env(name="HOST") %>'
   # Out of the box middleware configuration. to disable middleware you can changed the `enable` field to `false` of comment the middleware block
   middlewares:
     static:
@@ -67,14 +67,14 @@ mailer:
     # email gagal dicatat sebagai warning, bukan bikin register/login gagal.
     enable: <%= get_env(name="MAILER_ENABLE", default="false") %>
     # SMTP server host. e.x localhost, smtp.gmail.com
-    host: <%= get_env(name="MAILER_HOST", default="") %>
+    host: '<%= get_env(name="MAILER_HOST", default="") %>'
     # SMTP server port
     port: <%= get_env(name="MAILER_PORT", default="587") %>
     # Use secure connection (SSL/TLS).
     secure: true
     auth:
-      user: <%= get_env(name="MAILER_USER", default="") %>
-      password: <%= get_env(name="MAILER_PASSWORD", default="") %>
+      user: '<%= get_env(name="MAILER_USER", default="") %>'
+      password: '<%= get_env(name="MAILER_PASSWORD", default="") %>'
     # Override the SMTP hello name (default is the machine's hostname)
     # hello_name:
 
@@ -89,7 +89,7 @@ mailer:
 database:
   # Database connection URI. Required — there is no safe default for a
   # production database.
-  uri: <%= get_env(name="DATABASE_URL") %>
+  uri: '<%= get_env(name="DATABASE_URL") %>'
   # When enabled, the sql query will be logged.
   enable_logging: <%= get_env(name="DB_LOGGING", default="false") %>
   # Set the timeout duration when acquiring a connection.
@@ -117,7 +117,7 @@ auth:
   jwt:
     # Secret key for token generation and verification. Required: a secret
     # committed to the repository is a secret your users can forge tokens with.
-    secret: <%= get_env(name="JWT_SECRET") %>
+    secret: '<%= get_env(name="JWT_SECRET") %>'
     # Token expiration time in seconds
     expiration: 604800 # 7 days
     location:
@@ -132,5 +132,5 @@ settings:
   waxum:
     # Isi lewat environment, jangan lewat file yang ter-commit.
     # Container: http://waxum:3451 · tunnel ke host: http://localhost:3451
-    base_url: <%= get_env(name="WAXUM_BASE_URL", default="http://waxum:3451") %>
-    token: <%= get_env(name="WAXUM_TOKEN", default="") %>
+    base_url: '<%= get_env(name="WAXUM_BASE_URL", default="http://waxum:3451") %>'
+    token: '<%= get_env(name="WAXUM_TOKEN", default="") %>'
