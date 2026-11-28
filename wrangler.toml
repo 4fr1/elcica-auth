@@ -1,0 +1,17 @@
+name = "elcica-auth"
+main = "build/worker/shim.mjs"
+compatibility_date = "2026-11-21"
+
+# ID diisi otomatis oleh workflow deploy dari GitHub Secret D1_DATABASE_ID.
+[[d1_databases]]
+binding = "AUTH_DB"
+database_name = "elcica-auth"
+database_id = "__D1_DATABASE_ID__"
+
+# Worker menjadi origin-nya sendiri -> Custom Domain, bukan route /*.
+[[routes]]
+pattern = "auth.elcica.xyz"
+custom_domain = true
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
