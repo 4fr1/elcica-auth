@@ -41,5 +41,7 @@ jobs:
       - name: Cek kompilasi wasm
         run: cargo check --target wasm32-unknown-unknown
 
+      # Folder tests/ adalah warisan Loco dan tidak dipakai Worker.
+      # --lib memastikan yang dicek hanya kode Worker yang benar-benar di-deploy.
       - name: Clippy
-        run: cargo clippy --target wasm32-unknown-unknown --all-targets -- -D warnings
+        run: cargo clippy --lib --target wasm32-unknown-unknown -- -D warnings
