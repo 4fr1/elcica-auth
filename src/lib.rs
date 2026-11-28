@@ -156,7 +156,7 @@ button.logout:hover { border-color: #7ee0a3; color: #7ee0a3; }
     <div class="bar"><i id="bar"></i></div>
   </div>
 </div>
-<p class="sub" id="admin-note">Role <code>admin</code> terdeteksi. Panel manajemenuser menyusul.</p>
+<p class="sub" id="admin-note">Role <code>admin</code> terdeteksi. Panel manajemen user menyusul.</p>
 <div class="links">
   <a href="https://elcica.xyz/">ELCICA Core</a>
   <a href="https://m.elcica.xyz/">ELCICA POS</a>
