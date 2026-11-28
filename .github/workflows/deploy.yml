@@ -1,0 +1,65 @@
+name: Deploy ELCICA Auth ke Cloudflare
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+
+      - name: Cek D1 database id
+        id: check
+        env:
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+        run: |
+          if [ -n "$D1_DATABASE_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "D1_DATABASE_ID belum diset. Jalankan workflow 'D1 setup (satu kali)' dulu." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Pasang Rust + target wasm
+        if: steps.check.outputs.ready == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Isi database_id di wrangler.toml
+        if: steps.check.outputs.ready == 'true'
+        env:
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+        run: sed -i "s/__D1_DATABASE_ID__/$D1_DATABASE_ID/" wrangler.toml
+
+      - name: Pasang wrangler
+        if: steps.check.outputs.ready == 'true'
+        run: npm install -g wrangler@4
+
+      - name: Pastikan tabel D1 (idempotent)
+        if: steps.check.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: wrangler d1 execute elcica-auth --remote --file=migrations/0001_init.sql
+
+      - name: Build Rust Worker
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          cargo install worker-build --locked
+          worker-build --release
+
+      - name: Deploy ke Cloudflare
+        if: steps.check.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          wranglerVersion: "4"
+          command: deploy

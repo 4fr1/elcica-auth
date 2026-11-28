@@ -1,75 +1,81 @@
 # elcica-auth
 
-Backend auth/SSO Loco untuk ELCICA: user, role, plan, kuota bulanan, landing
-`elcica.xyz`, dan proxy pesan WhatsApp ke waxum.
+Auth/SSO untuk ELCICA di `auth.elcica.xyz`.
 
 ## Status
 
-Masih **lokal**. Cloudflare belum diubah; `elcica.xyz` dan `wa.elcica.xyz`
-belum diarahkan ke sini.
+Berjalan sebagai **Cloudflare Worker + D1**. Tidak perlu PC menyala, tidak perlu
+server, tidak perlu kartu. Deploy otomatis dari `main` lewat GitHub Actions.
 
-## Endpoint utama
+Versi Loco/Axum + SQLite lama ada di folder `src/controllers`, `src/models`,
+`migration/`, dll. File-file itu **tidak ikut dikompilasi** dan disimpan hanya
+sebagai referensi. Jangan diedit untuk perubahan produksi.
 
-```text
-GET  /                              landing ELCICA
-POST /api/auth/register
-POST /api/auth/login                → cookie elcica_session + token
-GET  /api/me                        → role, plan, quota, sent, period
-POST /api/auth/logout
-POST /api/wa/{session_id}/messages/text   → cek kuota, lalu forward ke waxum
-```
-
-Kuota dihitung per bulan (`YYYY-MM`). Plan seed: `free` 100 pesan, `paid` 5000.
-
-## Jalankan lokal
-
-Butuh XAMPP/MySQL? **Tidak** — project ini memakai SQLite.
-
-```powershell
-cargo loco db migrate
-cargo loco start
-```
-
-Server berjalan di `http://localhost:5150`. Waxum lokal di `http://localhost:3451`.
-
-## Konfigurasi sensitif
-
-File `config/development.local.yaml` **tidak ikut committed** (sudah ada di
-`.gitignore`). Isinya secret lokal, termasuk `JWT_SECRET` yang **wajib base64**.
-
-Untuk produksi, jangan taruh nilai di repo. Simpan lewat GitHub GUI:
+## Arsitektur
 
 ```text
-Settings → Secrets and variables → Actions
+Browser auth.elcica.xyz
+        │
+        ▼
+Worker Rust (worker 0.9 + modul d1)
+        │  binding AUTH_DB
+        ▼
+Cloudflare D1 (SQLite) — tabel users + usages
 ```
 
-Variabel produksi yang dipakai (nilainya tidak pernah disimpan di repo):
+Cookie `elcica_session` memakai `Domain=.elcica.xyz`, `HttpOnly`, `Secure`,
+`SameSite=Lax`, berlaku 7 hari, supaya bisa dipakai subdomain lain.
+
+## Endpoint
 
 ```text
-DATABASE_URL      JWT_SECRET (wajib base64)   HOST
-WAXUM_BASE_URL    WAXUM_TOKEN
-MAILER_ENABLE     MAILER_HOST / MAILER_USER / MAILER_PASSWORD
-PORT / BINDING    (opsional, default 5150 / 0.0.0.0)
+GET  /                       halaman depan
+GET  /login                  form login
+GET  /register               form daftar
+GET  /admin                  halaman admin
+GET  /health                 cek hidup -> JSON
+
+POST /api/auth/register      daftar user
+POST /api/auth/login         login -> cookie + JWT
+POST /api/auth/logout        hapus cookie
+GET  /api/me                 identitas, role, plan, kuota, periode
 ```
 
-Mailer default-nya mati di produksi; email gagal hanya jadi warning dan tidak
-menggagalkan register/login. Token Cloudflare masuk GUI, bukan file repo.
+Email yang diterima: `@example.com` dan `@gmail.com` (sama seperti versi lama).
 
-## Workflow
+## Secret GitHub
 
-`.github/workflows/ci.yml` jalan otomatis saat push/PR ke `main` atau `dev`:
+Di **Settings → Secrets and variables → Actions**:
 
 ```text
-cargo fmt --check → cargo clippy -D warnings → cargo test → cargo build --release
+CF_ACCOUNT_ID    sudah ada
+CF_API_TOKEN     sudah ada
+D1_DATABASE_ID   UUID dari workflow "D1 setup (satu kali)"
+JWT_SECRET       base64, minimal 32 byte. Contoh: openssl rand -base64 32
 ```
 
-Hasilnya terlihat di tab **Actions** di GitHub. Ikon merah di commit/PR berarti
-ada langkah yang gagal, lengkap dengan log-nya.
+Nilai secret tidak pernah disimpan di repo dan tidak dicetak di log.
 
-## Catatan
+## Deploy
 
-- Entity di `src/models/_entities/` di-generate dari database. Jangan edit manual.
-- `backup-products-image.txt` dan script PHP di workspace lain tidak berhubungan
-  dengan project ini.
-- Session WhatsApp harus tersambung dulu di waxum sebelum proxy bisa mengirim
-  pesan nyata.
+1. Jalankan sekali: **Actions → D1 setup (satu kali) → Run workflow**.
+   Salin UUID yang muncul ke secret `D1_DATABASE_ID`.
+2. Push/merge ke `main`. Workflow **Deploy ELCICA Auth ke Cloudflare** akan:
+   - mengisi `database_id` di `wrangler.toml`,
+   - menjalankan `migrations/0001_init.sql` (idempotent),
+   - build `worker-build --release`,
+   - `wrangler deploy` dengan Custom Domain `auth.elcica.xyz`.
+
+Cek manual:
+
+```bash
+curl -s https://auth.elcica.xyz/health
+curl -s https://auth.elcica.xyz/login | head
+```
+
+## Catatan keamanan
+
+Password disimpan sebagai `pbkdf2$<salt>$<hash>` (PBKDF2-HMAC-SHA256,
+10.000 iterasi). Iterasi sengaja rendah karena Workers Free punya batas
+**10 ms CPU per request**. Untuk produksi skala besar, naikkan iterasi setelah
+pindah ke Workers Paid atau pindahkan verifikasi ke Durable Object.
