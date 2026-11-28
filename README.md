@@ -55,6 +55,9 @@ JWT_SECRET       base64, minimal 32 byte. Contoh: openssl rand -base64 32
 ```
 
 Nilai secret tidak pernah disimpan di repo dan tidak dicetak di log.
+`JWT_SECRET` dan `D1_DATABASE_ID` adalah GitHub Secret; workflow deploy yang
+meneruskan `JWT_SECRET` ke dalam Worker sebagai Worker Secret. GitHub Secret
+saja tidak otomatis tersedia di runtime Worker.
 
 ## Deploy
 
