@@ -436,9 +436,10 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         (Method::Post, "/api/auth/register") => handle_register(req, &env).await,
         (Method::Get, "/api/me") => handle_me(&req, &env).await,
 
-        (Method::Post, "/api/auth/logout") => {
-            with_cookie(Response::from_json(&serde_json::json!({ "ok": true }))?, clear_cookie())
-        }
+        (Method::Post, "/api/auth/logout") => with_cookie(
+            Response::from_json(&serde_json::json!({ "ok": true }))?,
+            clear_cookie(),
+        ),
 
         _ => Response::error("Not Found", 404),
     }
