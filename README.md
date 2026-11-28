@@ -50,7 +50,7 @@ Di **Settings → Secrets and variables → Actions**:
 ```text
 CF_ACCOUNT_ID    sudah ada
 CF_API_TOKEN     sudah ada
-D1_DATABASE_ID   UUID dari workflow "D1 setup (satu kali)"
+D1_DATABASE_ID   UUID dari dashboard Cloudflare → D1 → elcica-auth → Database ID
 JWT_SECRET       base64, minimal 32 byte. Contoh: openssl rand -base64 32
 ```
 
@@ -58,13 +58,17 @@ Nilai secret tidak pernah disimpan di repo dan tidak dicetak di log.
 
 ## Deploy
 
-1. Jalankan sekali: **Actions → D1 setup (satu kali) → Run workflow**.
-   Salin UUID yang muncul ke secret `D1_DATABASE_ID`.
-2. Push/merge ke `main`. Workflow **Deploy ELCICA Auth ke Cloudflare** akan:
+1. Buat database sekali lewat dashboard: **D1 → Create Database**, nama `elcica-auth`.
+2. Di tab **Console**, jalankan isi `migrations/0001_init.sql` (sekali saja).
+3. Salin **Database ID** ke secret `D1_DATABASE_ID`.
+4. Push/merge ke `main`. Workflow **Deploy ELCICA Auth ke Cloudflare** akan:
    - mengisi `database_id` di `wrangler.toml`,
-   - menjalankan `migrations/0001_init.sql` (idempotent),
    - build `worker-build --release`,
    - `wrangler deploy` dengan Custom Domain `auth.elcica.xyz`.
+
+Deploy sengaja **tidak** memanggil API D1 karena token Cloudflare yang ada belum
+punya izin `D1:Edit`. Kalau nanti token di-upgrade, langkah migrasi bisa
+ditambahkan lagi ke workflow.
 
 Cek manual:
 
