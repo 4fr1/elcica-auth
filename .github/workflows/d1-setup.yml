@@ -1,18 +1,37 @@
-CREATE TABLE IF NOT EXISTS users (
-    pid           TEXT PRIMARY KEY,
-    email         TEXT NOT NULL UNIQUE,
-    name          TEXT NOT NULL,
-    password_hash TEXT NOT NULL,
-    role          TEXT NOT NULL DEFAULT 'user',
-    plan          TEXT NOT NULL DEFAULT 'free',
-    created_at    INTEGER NOT NULL
-);
+name: D1 setup (satu kali)
 
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+# Membuat database D1 kalau belum ada, lalu mencetak UUID-nya.
+# UUID dipakai sebagai GitHub Secret D1_DATABASE_ID oleh workflow deploy.
+# Aman dijalankan ulang: kalau database sudah ada, tidak dibuat lagi.
+on:
+  workflow_dispatch:
 
-CREATE TABLE IF NOT EXISTS usages (
-    user_pid TEXT NOT NULL,
-    period   TEXT NOT NULL,
-    sent     INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (user_pid, period)
-);
+jobs:
+  d1:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Buat database elcica-auth kalau belum ada
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          API="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/d1/database"
+          AUTH=(-H "Authorization: Bearer $CF_API_TOKEN")
+
+          id=$(curl -fsS "${AUTH[@]}" "$API?name=elcica-auth" | jq -r '.result[0].uuid // empty')
+
+          if [ -n "$id" ]; then
+            echo "Database sudah ada: $id" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            out=$(curl -fsS -X POST "${AUTH[@]}" -H 'Content-Type: application/json' \
+              --data '{"name":"elcica-auth"}' "$API")
+            id=$(echo "$out" | jq -r '.result[0].uuid // empty')
+            echo "Database dibuat: $id" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+          test -n "$id" || { echo "Gagal membuat/menemukan D1 database"; exit 1; }
+
+          echo "" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Salin UUID di atas ke GitHub Secret **D1_DATABASE_ID**." | tee -a "$GITHUB_STEP_SUMMARY"
