@@ -75,7 +75,8 @@ document.getElementById('f').addEventListener('submit', async function (e) {
     })
   });
   if (res.ok) { location.href = '/admin'; return; }
-  msg.textContent = 'Login gagal. Periksa email dan kata sandi.';
+  const data = await res.json().catch(function () { return {}; });
+  msg.textContent = data.error || 'Login gagal. Periksa email dan kata sandi.';
 });
 </script>
 "#;
@@ -109,23 +110,86 @@ document.getElementById('f').addEventListener('submit', async function (e) {
     })
   });
   if (res.ok) { location.href = '/login'; return; }
-  msg.textContent = 'Pendaftaran gagal. Email mungkin sudah dipakai.';
+  const data = await res.json().catch(function () { return {}; });
+  msg.textContent = data.error || 'Pendaftaran gagal. Email mungkin sudah dipakai.';
 });
 </script>
 "#;
 
 const ADMIN_BODY: &str = r#"
-<h1>Admin</h1>
-<p class="sub">Identitas dan role diputuskan server lewat <code>/api/me</code>.</p>
-<pre id="me">Memuat identitas...</pre>
-<p><a class="alt" href="/api/auth/logout">Keluar</a></p>
+<style>
+.card { width: min(760px, 100%); }
+.dash-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.badge { border: 1px solid #294535; color: #7ee0a3; border-radius: 99px; padding: 5px 12px; font-size: .7rem; letter-spacing: .1em; white-space: nowrap; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 22px; }
+.tile { background: #07110b; border: 1px solid #1d3227; border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.tile .k { color: #8fa89a; font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; }
+.tile .v { color: #e6f3ea; margin-top: 5px; font-size: .92rem; overflow-wrap: anywhere; }
+.bar { height: 6px; background: #0d1812; border-radius: 99px; overflow: hidden; margin-top: 10px; }
+.bar > i { display: block; height: 100%; width: 0; background: #7ee0a3; transition: width .4s ease; }
+.links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+.links a { flex: 1; min-width: 150px; text-align: center; padding: 10px; border: 1px solid #294535; border-radius: 8px; color: #7ee0a3; text-decoration: none; font-size: .8rem; }
+.links a:hover { border-color: #7ee0a3; }
+button.logout { margin-top: 22px; background: transparent; border: 1px solid #294535; color: #8fa89a; }
+button.logout:hover { border-color: #7ee0a3; color: #7ee0a3; }
+#err { color: #ff9b9b; min-height: 1.2em; }
+#admin-note { display: none; }
+@media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+</style>
+<div class="dash-head">
+  <div>
+    <h1 id="title">Dashboard</h1>
+    <p class="sub">Sesi terpusat ELCICA</p>
+  </div>
+  <span class="badge" id="role">...</span>
+</div>
+<p id="err" class="sub"></p>
+<div class="grid">
+  <div class="tile"><div class="k">Nama</div><div class="v" id="name">...</div></div>
+  <div class="tile"><div class="k">Email</div><div class="v" id="email">...</div></div>
+  <div class="tile"><div class="k">Plan</div><div class="v" id="plan">...</div></div>
+  <div class="tile"><div class="k">Periode</div><div class="v" id="period">...</div></div>
+  <div class="tile"><div class="k">User ID</div><div class="v" id="pid" style="font-size:.75rem">...</div></div>
+  <div class="tile">
+    <div class="k">Pemakaian</div>
+    <div class="v" id="usage">...</div>
+    <div class="bar"><i id="bar"></i></div>
+  </div>
+</div>
+<p class="sub" id="admin-note">Role <code>admin</code> terdeteksi. Panel manajemenuser menyusul.</p>
+<div class="links">
+  <a href="https://elcica.xyz/">ELCICA Core</a>
+  <a href="https://m.elcica.xyz/">ELCICA POS</a>
+  <a href="/health">Health Check</a>
+</div>
+<button class="logout" id="logout">Keluar</button>
 <script>
 (async function () {
-  const el = document.getElementById('me');
-  const res = await fetch('/api/me');
-  if (!res.ok) { location.href = '/login'; return; }
-  el.textContent = JSON.stringify(await res.json(), null, 2);
+  const err = document.getElementById('err');
+  try {
+    const res = await fetch('/api/me', { credentials: 'same-origin' });
+    if (res.status === 401) { location.replace('/login'); return; }
+    if (!res.ok) { throw new Error('Gagal memuat identitas'); }
+    const me = await res.json();
+    document.getElementById('title').textContent = me.role === 'admin' ? 'Dashboard Admin' : 'Dashboard';
+    document.getElementById('role').textContent = me.role.toUpperCase();
+    document.getElementById('name').textContent = me.name;
+    document.getElementById('email').textContent = me.email;
+    document.getElementById('plan').textContent = me.plan.toUpperCase();
+    document.getElementById('period').textContent = me.period;
+    document.getElementById('pid').textContent = me.pid;
+    document.getElementById('usage').textContent = me.sent + ' / ' + me.quota;
+    const pct = me.quota > 0 ? Math.min(100, Math.round(me.sent / me.quota * 100)) : 0;
+    document.getElementById('bar').style.width = pct + '%';
+    if (me.role === 'admin') { document.getElementById('admin-note').style.display = 'block'; }
+  } catch (e) {
+    err.textContent = e.message || 'Gagal memuat dashboard.';
+  }
 })();
+document.getElementById('logout').addEventListener('click', async function () {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+  location.replace('/login');
+});
 </script>
 "#;
 
